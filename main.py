@@ -106,6 +106,36 @@ class Visualize():
         sns.heatmap(sorted_duplicates*1, annot=False, cmap='Reds', cbar=False)
         plt.title('pattern of missing data')
         plt.savefig("vis_column_missing_patern.png")
+        plt.close()
+
+        # グリッドの作成
+        fig = plt.figure(figsize=(8, 8))
+        gs = fig.add_gridspec(2, 2,  width_ratios=[1, 4], height_ratios=[4, 1])
+        ax_main = fig.add_subplot(gs[0, 1])
+        ax_x_dist = fig.add_subplot(gs[1, 1], sharex=ax_main)
+        ax_y_dist = fig.add_subplot(gs[0, 0], sharey=ax_main)
+
+        # 主要な散布図を描画
+        x = df['Age']
+        y = df['Cabin']
+        ax_main.scatter(x, y, alpha=0.5)
+
+        # 端にboxplotを描画
+        x = pd.concat([x,missing_data.loc[:,"Cabin"]*1], axis=1)
+        y = pd.concat([y,missing_data.loc[:,"Age"]*1], axis=1)
+        sns.boxplot(data=x, x="Age", y="Cabin", hue="Cabin", ax=ax_x_dist, orient='h')
+        sns.boxplot(data=y, x="Age", y="Cabin", hue="Age", ax=ax_y_dist, orient='v')
+
+        # 無駄な軸のラベルや刻みを削除
+        ax_x_dist.set(xlabel='', yticks=[], xticks=[])
+        ax_y_dist.set(ylabel='', xticks=[], yticks=[])
+        ax_main.set(xlabel='Age', ylabel='Cabin')
+        sns.despine(ax=ax_x_dist, left=True)
+        sns.despine(ax=ax_y_dist, bottom=True)
+
+        plt.tight_layout()
+        plt.savefig("vis_scatter_missing_patern.png")
+        plt.close()
 
 
     def vis_distribusion(self, df1, hue):
@@ -116,13 +146,15 @@ class Visualize():
         other_col.remove(hue)
         df.loc[:,hue] = missing_data.loc[:,hue]
         # 一つの図に表示するための設定
-        fig, axes = plt.subplots(ncols=len(df.columns) - 1, figsize=(4 * (len(df.columns) - 1), 4))
-
+        fig, axes = plt.subplots(ncols=len(df.columns) - 1, figsize=(3 * (len(df.columns) - 1), 3))
+        # ヒストグラムの表示
         # 各説明変数の分布をviolinplotで表示
         for ax, col in zip(axes, df.drop(hue, axis=1).columns):
             print(col)
-            sns.boxplot(data=df, x=hue, y=col, hue=hue, whis=[0, 100], width=.6, ax=ax)
-            sns.stripplot(df, x=hue, y=col, hue=hue, size=4, palette='dark:.3', alpha=.3, dodge=True, ax=ax)
+            sns.boxplot(data=df, x=hue, y=col, hue=hue, whis=[0, 100], saturation=0.5, width=.6, ax=ax)
+            sns.stripplot(df, x=hue, y=col,hue=hue, size=4, alpha=.3, dodge=True, ax=ax)
+            handles, labels = ax.get_legend_handles_labels()
+            ax.legend(handles[:len(df[hue].unique())], labels[:len(df[hue].unique())])
             ax.set_title(f'Distribution of {col} by Flag')
             ax.set_xlabel(hue)
             ax.set_ylabel(col)
@@ -130,19 +162,23 @@ class Visualize():
         plt.tight_layout()
         plt.savefig("vis_pair.png")
         plt.close()
-        '''
-        sns.catplot(data=df, kind="violin", x="day", y="total_bill", hue="smoker", split=True)
-        df[df.iloc[:,col].isnull()][other_col].hist(color='skyblue', alpha=0.7, label='Missing in A')
-        plt.suptitle('Distribution when A is missing')
-        plt.legend()
-        plt.show()
 
-        # A列に欠損がない行のB, Cの分布
-        df[df.iloc[:,col].notnull()][other_col].hist(color='salmon', alpha=0.7, label='Not Missing in A')
-        plt.suptitle('Distribution when A is not missing')
-        plt.legend()
-        plt.show()
-        '''
+        df2 = df.drop(hue, axis=1)        
+        df2 = missing_data[missing_data[hue]==0].sum().sort_values(ascending=False)
+        # 累積度数曲線のプロット
+        plt.figure(figsize=(8, 6))
+        df2[:4].plot(kind='bar', color='skyblue')
+        plt.title('ABC analysis (Cabin)')
+        plt.ylabel('Number of Missing Values Per Column')
+        plt.xlabel('Columns')
+        (df2[:4]/df2[:4].sum()).cumsum().plot(secondary_y=True, color='red', style='--')
+        plt.ylim(0, 1.1)
+        plt.ylabel('cumsum of Missing Values Per Column')
+        plt.savefig("vis_cumsum.png")
+        plt.close()
+
+        
+
 
     def vis_y(self, df, missing_df, col):
         missing_data = missing_df[col].isnull() * 1
@@ -162,15 +198,43 @@ class Visualize():
         plt.close()
         #dff.plot.hist(alpha=0.5)
 
+    def vis_scatter(self, imp_df, df, cols, obs):
+        missing_data = imp_df.isnull() * 1
+        missing_data = missing_data[obs]
+
+        # 一つの図に表示するための設定
+        fig, axes = plt.subplots(ncols=len(cols), figsize=(5 * len(cols), 5))
+
+        # 各説明変数の分布をviolinplotで表示
+        for ax, col in zip(axes, cols):
+            print(col)
+            # 補完状態を特定
+            conditions = {
+                'Only Cabin Filled': (df[obs].isna() & ~df[col].isna()),
+                'Only other col Filled': (~df[obs].isna() & df[col].isna()),
+                'Both Filled': (df[obs].isna() & df[col].isna()),
+                'Observation': (~df[obs].isna() & ~df[col].isna())
+            }
+            for condition, mask in conditions.items():
+                sns.scatterplot(x=imp_df[mask][obs], y=imp_df[mask][col], label=condition, ax=ax)
+                
+            ax.legend()
+            ax.set_title(f'Distribution of {col} by Flag')
+            ax.set_xlabel(obs)
+            ax.set_ylabel(col)
+
+        plt.savefig("vis_impute_scatter.png")
+        plt.close()
 
 
 
 if __name__ == "__main__":
     df = pd.read_csv('train.csv')
     print(df.isnull().sum())
-    Visualize().visualize(df)
+
     ax1 = msno.heatmap(df)
     plt.savefig("vis_mno.png")
+    plt.close()
 
     # カテゴリカルデータのカラムだけを取得してエンコーディング
     label_encoders = {}  # 各カラムのエンコーダを保存するための辞書
@@ -179,10 +243,12 @@ if __name__ == "__main__":
         df[col] = pd.Series(le.fit_transform(df[col][df[col].notnull()]), index=df[col][df[col].notnull()].index)
         label_encoders[col] = le  # 必要に応じてエンコーダを保存
 
+    Visualize().visualize(df)
     Visualize().vis_distribusion(df, "Cabin")
 
     # 欠測値補完
     imputed_data = Visualize().predictive_mean_matching(df, 'Cabin', n_neighbors=1)
+    imputed_data = Visualize().predictive_mean_matching(imputed_data, 'Age', n_neighbors=1)
     Visualize().vis_y(imputed_data, df, 'Cabin')
-    a = 0
+    Visualize().vis_scatter(imputed_data, df, ["Age", "Survived", "Pclass"], 'Cabin')
 
