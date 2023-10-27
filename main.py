@@ -157,7 +157,6 @@ class Visualize():
         #sns.histplot(data=df2, color="red", label="missing")
         sns.kdeplot(data=df1, fill=False, color="blue", bw_adjust=0.3, label="observation")
         sns.kdeplot(data=df2, fill=False, color="red", bw_adjust=0.3, label="missing")
-        sns.kdeplot(data=df[col], fill=False, color="green", bw_adjust=0.3, label="total")
         plt.legend()
         plt.savefig("vis_impute.png")
         plt.close()
