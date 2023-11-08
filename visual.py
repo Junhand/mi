@@ -1,6 +1,7 @@
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from scipy.stats import ttest_ind
+import numpy as np
 
 def plot_df_t(df, target_col):
 
@@ -42,7 +43,6 @@ def plot_df_t(df, target_col):
                              points='all', jitter=1, pointpos=0, 
                              width=0.35, marker_color='red', line_color='red'), row=1, col=i)
         
-
         annotations.append({
             'x': 0.5,  # サブプロットのインデックスをx座標として使用
             'y': 1.1,  # y座標をプロットエリアの上部に設定
@@ -55,7 +55,7 @@ def plot_df_t(df, target_col):
 
     # 更新オプション
     fig.update_layout(
-        title=f"列{target_col}の観測と欠測における分布の違い（p：スチューデントのt検定）",
+        title=f"列{target_col}の観測と欠測における分布の違い（p：ウェルチのt検定）",
         title_x = 0.5,
         boxgap=0.5,      # ボックス間の間隔を広げる
         annotations=annotations,
@@ -90,38 +90,42 @@ def plot_df_scatter(df, target_col):
 
     num_cols = len(significant_cols)
 
-    specs = [[0 for _ in range(num_cols*4)] for _ in range(3)]
+    specs = [[0 for _ in range(num_cols*4)] for _ in range(4)]
     column_widths = []
     for i in range(num_cols*4):
         if i % 4==0:
             specs[0][i] = {"type": "box"}
             specs[1][i] = {"type": "box"}
             specs[2][i] = {"type": "box"}
+            specs[3][i] = {"type": "box"}
             column_widths.append(0.2)
         elif i % 4==1:
-            specs[0][i] = {"type": "violin"}
-            specs[1][i] = {"type": "box"}
+            specs[0][i] = {"type": "box"}
+            specs[1][i] = {"type": "scatter"}
             specs[2][i] = {"type": "box"}
+            specs[3][i] = {"type": "box"}
             column_widths.append(0.1)
         elif i % 4==2:
-            specs[0][i] = {"type": "scatter"}
-            specs[1][i] = {"type": "violin"}
-            specs[2][i] = {"type": "box"}
+            specs[0][i] = {"type": "box"}
+            specs[1][i] = {"type": "scatter"}
+            specs[2][i] = {"type": "scatter"}
+            specs[3][i] = {"type": "box"}
             column_widths.append(0.6)
         elif i % 4==3:
-            specs[0][i] = {"type": "scatter"}
-            specs[1][i] = {"type": "violin"}
+            specs[0][i] = {"type": "box"}
+            specs[1][i] = {"type": "box"}
             specs[2][i] = {"type": "box"}
+            specs[3][i] = {"type": "box"}
             column_widths.append(0.1)
    
     fig = make_subplots(
-        rows=3, cols=num_cols*4,
-        #shared_xaxes=True,
-        #shared_yaxes=True,
-        vertical_spacing=1/16,
-        horizontal_spacing=1/(num_cols*4-1)/6,
+        rows=4, cols=num_cols*4,
+        shared_xaxes=True,
+        shared_yaxes=True,
+        vertical_spacing=0.005,
+        horizontal_spacing=0.001,
         column_widths = column_widths,
-        row_heights = [0.7, 0.1, 0.2],
+        row_heights = [0.1, 0.6, 0.1, 0.2],
         specs=specs
     )
 
@@ -138,27 +142,34 @@ def plot_df_scatter(df, target_col):
                 mode='markers', 
                 name=f'Scatterplot {col}'
             ),
-            row=1, col=i*4-1
-        )
-        # 全体の幅と高さを設定する
-        fig.update_layout(width=800, height=800)
-        fig.add_trace(
-            go.Violin(x=missing_df_other[col], 
-                      points='all', jitter=1, pointpos=0, 
-                      width=0.1, marker_color='red',
-                      line_color='red',
-                      name=f''
-                      ),
             row=2, col=i*4-1
         )
+        # 全体の幅と高さを設定する
+        #fig.update_layout(width=800, height=800)
+        a = missing_df_other[col].values
+        b = np.zeros(len(missing_df_other[col]))
         fig.add_trace(
-            go.Violin(y=missing_df_target[target_col], 
-                      points='all', jitter=1, pointpos=0, 
-                      width=0.1, marker_color='red',
-                      line_color='red',
-                      name=f''
+            go.Scatter(x=missing_df_other[col],
+                       y=np.zeros(len(missing_df_other[col])),
+                      #jitter=1, pointpos=0, 
+                      #marker_color='red',
+                      mode ='markers',
+                      marker_color='red',
+                      #name=f''
                       ),
-            row=1, col=i*4-2
+            row=3, col=i*4-1
+        )
+        fig.add_trace(
+            go.Scatter(x=np.zeros(len(missing_df_target[target_col])),
+                        y=missing_df_target[target_col].values, 
+                      #jitter=1, pointpos=0, 
+                      #marker_color='red',
+                      #line_color='red',
+                      marker_color='red',  # カラースケール変更
+                      mode ='markers',
+                      #name=f''
+                      ),
+            row=2, col=i*4-2
         )
 
         # 箱ひげ図を描画
@@ -166,70 +177,93 @@ def plot_df_scatter(df, target_col):
             go.Box( 
                 name=f'Observed',
                 x=observed_df_other[col], 
-                jitter=1, pointpos=0, 
+                jitter=0.5, pointpos=0, 
+                offsetgroup=1,
                 boxpoints='all',
-                width=0.35, marker_color='blue',
+                marker_color='blue',
                 orientation='h'
             ),
-            row=3, col=i*4-1
+            row=4, col=i*4-1
         )
         fig.add_trace(
             go.Box( 
                 name=f'Missing',
                 x=missing_df_other[col], 
-                jitter=1, pointpos=0, 
+                jitter=0.5, pointpos=0, 
+                offsetgroup=1,
                 boxpoints='all',
-                width=0.35, marker_color='red',
+                marker_color='red',
                 orientation='h'
             ),
-            row=3, col=i*4-1
+            row=4, col=i*4-1
         )
 
         fig.add_trace(
             go.Box( 
                 name=f'Observed',
                 y=observed_df_target[target_col], 
-                jitter=1, pointpos=0, 
+                jitter=0.5, pointpos=0, 
+                offsetgroup=1,
                 boxpoints='all',
-                width=0.35, marker_color='blue',
+                marker_color='blue',
             ),
-            row=1, col=i*4-3
+            row=2, col=i*4-3
         )
-        fig.update_xaxes(tickangle=-90, automargin=True)
-
+ 
         # 箱ひげ図を描画
         fig.add_trace(
             go.Box(
                 name=f'Missing',
                 y=missing_df_target[target_col], 
-                jitter=1, pointpos=0, 
+                jitter=0.5, pointpos=0, 
+                offsetgroup=1,
                 boxpoints='all',
-                width=0.35, marker_color='red',
+                marker_color='red',
             ),
-            row=1, col=i*4-3
+            row=2, col=i*4-3
         )
-        fig.update_xaxes(tickangle=-90, automargin=True)
         # 軸の設定
-        fig.update_xaxes(title_text=col, row=3, col=i*4-1)
-        fig.update_yaxes(title_text=target_col, row=1, col=i*4-3)
-        # # 軸の設定
-        #fig.update_xaxes(title_text=col, row=1, col=i)
-        #fig.update_yaxes(title_text=target_col, row=1, col=i)
+        #
+        fig.update_xaxes(title_text=col, row=4, col=i*4-1)
+        fig.update_xaxes(showgrid=False, row=2, col=i*4-2)
+        fig.update_xaxes(showticklabels=True, tickangle=-90, automargin=True, row=2, col=i*4-3)
 
-        #fig.update_xaxes(showticklabels=False, row=2, col=i+1)
-        #if i % 2 == 0:
-        #    fig.update_yaxes(showticklabels=False, row=1, col=i+1)
+        fig.update_yaxes(showticklabels=True, row=4, col=i*4-1)
+        fig.update_yaxes(showgrid=False, row=3, col=i*4-1)
+        fig.update_yaxes(showticklabels=False, row=2, col=i*4-1)
+        fig.update_yaxes(showticklabels=False, row=2, col=i*4-2)
+        fig.update_yaxes(title_text=target_col, showticklabels=True, row=2, col=i*4-3)
+        
+        
+
+        # # 軸の設定
 
     # グリッド内のプロット間のスペースを調整
     fig.update_layout(
         showlegend=False,
         boxmode='group',
-        width=600*(num_cols-1),
+        width=600*num_cols,
         height=600,
-        grid={'rows': 3, 'columns': num_cols*3}
+        margin=dict(t=20, b=20, l=20, r=20),
+        #grid={'rows': 4, 'columns': num_cols*4}
     )
 
     # プロットの表示
     fig.show()
 
-    
+
+
+def plot_df_ts(df):
+    # サブプロットの行と列の数を決定
+    missing_data = df.isnull() * 1
+
+    t_lists = [[]]
+    for i, col in enumerate(range(df.columns)):
+        observed_df_other = df[missing_data[col] == 0]
+        missing_df_other = df[missing_data[col] == 1]
+
+        for j in range(df[col].drop().columns):
+            if df[j].isnull().sum() == 0: continue
+            # t検定を実施
+            t_stat, p_value = ttest_ind(observed_df_other[j], missing_df_other[j], equal_var=False)
+            
