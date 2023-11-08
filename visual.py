@@ -54,7 +54,7 @@ def plot_df_t(df, target_col):
             'font': {'color': 'red', 'size': 8},
         })      
         fig.update_xaxes(title_text=target_col, row=1, col=i)  
-        fig.update_yaxes(title_text=col, row=1, col=i)  
+        fig.update_yaxes(title_text=col, automargin=True, row=1, col=i)  
 
     # 更新オプション
     fig.update_layout(
