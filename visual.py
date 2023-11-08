@@ -29,29 +29,32 @@ def plot_df_t(df, target_col):
             p_values.append(p_value)
 
     # 一つの図に表示するための設定
-    fig = make_subplots(rows=1, cols=len(significant_cols), horizontal_spacing=0.05 ) # 例として0.05を設定)
+    num_cols = len(significant_cols)
+    fig = make_subplots(rows=1, cols=len(significant_cols), horizontal_spacing=0.1) # 例として0.05を設定)
     # バイオリンプロットとストリッププロットを追加
     annotations = []
     for i, col in enumerate(significant_cols, start=1):
         # 観測データのボックスプロットを追加
-        fig.add_trace(go.Violin(y=observed_data[col], name=f'Observed {col}', 
-                             points='all', jitter=1, pointpos=0, 
+        fig.add_trace(go.Violin(y=observed_data[col], name=f'Observed', 
+                             points='all', jitter=1, pointpos=0, box_visible=True,
                              width=0.35, marker_color='blue', line_color='blue'), row=1, col=i)
 
         # 欠測データのボックスプロットを追加
-        fig.add_trace(go.Violin(y=missing_data[col], name=f'Missing {col}', 
-                             points='all', jitter=1, pointpos=0, 
+        fig.add_trace(go.Violin(y=missing_data[col], name=f'Missing', 
+                             points='all', jitter=1, pointpos=0, box_visible=True,
                              width=0.35, marker_color='red', line_color='red'), row=1, col=i)
         
         annotations.append({
             'x': 0.5,  # サブプロットのインデックスをx座標として使用
-            'y': 1.1,  # y座標をプロットエリアの上部に設定
+            'y': 1.05,  # y座標をプロットエリアの上部に設定
             'xref': f'x{i}', 
             'yref': 'paper',  # ペーパー座標を使用
             'text': f'p={p_values[i-1]:.3f}',
             'showarrow': False,
             'font': {'color': 'red', 'size': 8},
-        })        
+        })      
+        fig.update_xaxes(title_text=target_col, row=1, col=i)  
+        fig.update_yaxes(title_text=col, row=1, col=i)  
 
     # 更新オプション
     fig.update_layout(
@@ -59,7 +62,10 @@ def plot_df_t(df, target_col):
         title_x = 0.5,
         boxgap=0.5,      # ボックス間の間隔を広げる
         annotations=annotations,
-        violinmode='group'
+        violinmode='group',
+        showlegend=False,
+        width=150*num_cols,
+        height=600,
     )
     fig.update_xaxes(tickangle=-90, automargin=True)
 
@@ -144,30 +150,21 @@ def plot_df_scatter(df, target_col):
             ),
             row=2, col=i*4-1
         )
-        # 全体の幅と高さを設定する
-        #fig.update_layout(width=800, height=800)
         a = missing_df_other[col].values
         b = np.zeros(len(missing_df_other[col]))
         fig.add_trace(
             go.Scatter(x=missing_df_other[col],
                        y=np.zeros(len(missing_df_other[col])),
-                      #jitter=1, pointpos=0, 
-                      #marker_color='red',
                       mode ='markers',
                       marker_color='red',
-                      #name=f''
                       ),
             row=3, col=i*4-1
         )
         fig.add_trace(
             go.Scatter(x=np.zeros(len(missing_df_target[target_col])),
                         y=missing_df_target[target_col].values, 
-                      #jitter=1, pointpos=0, 
-                      #marker_color='red',
-                      #line_color='red',
                       marker_color='red',  # カラースケール変更
                       mode ='markers',
-                      #name=f''
                       ),
             row=2, col=i*4-2
         )
@@ -233,10 +230,6 @@ def plot_df_scatter(df, target_col):
         fig.update_yaxes(showticklabels=False, row=2, col=i*4-1)
         fig.update_yaxes(showticklabels=False, row=2, col=i*4-2)
         fig.update_yaxes(title_text=target_col, showticklabels=True, row=2, col=i*4-3)
-        
-        
-
-        # # 軸の設定
 
     # グリッド内のプロット間のスペースを調整
     fig.update_layout(
@@ -245,7 +238,6 @@ def plot_df_scatter(df, target_col):
         width=600*num_cols,
         height=600,
         margin=dict(t=20, b=20, l=20, r=20),
-        #grid={'rows': 4, 'columns': num_cols*4}
     )
 
     # プロットの表示
