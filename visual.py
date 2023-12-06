@@ -344,18 +344,32 @@ def listwize_vis(df):
 # # Dashアプリの初期化
 # app = dash.Dash(__name__)
 # app.layout = html.Div([
+#     html.H4('列を選択', style={'color': 'white'}),
 #     dcc.Dropdown(
 #         id='column-dropdown',
 #         options=[{'label': col, 'value': col} for col in df.columns],
-#         value='A'
+#         value=['A'],
+#         multi=True
+#     ),
+#     html.H4('行を選択', style={'color': 'white'}),
+#     dcc.Dropdown(
+#         id='row-dropdown',
+#         options=[{'label': i, 'value': i} for i in df.index],
+#         value=list(df.index),
+#         multi=True
 #     ),
 #     dcc.Graph(id='graph-output')
 # ])
 # @app.callback(
 #     Output('graph-output', 'figure'),
-#     Input('column-dropdown', 'value')
+#     [Input('column-dropdown', 'value'),
+#      Input('row-dropdown', 'value')]
 # )
-# def update_graph(selected_column):
-#     return px.line(df, x=df.index, y=selected_column)
+# def update_graph(selected_columns, selected_rows):
+#     if not selected_columns or not selected_rows:
+#         return px.line()  # 列または行が選択されていない場合は空のグラフを返す
+
+#     filtered_df = df.loc[selected_rows, selected_columns]
+#     return px.line(filtered_df, x=filtered_df.index, y=filtered_df.columns)
 # if __name__ == '__main__':
 #     app.run_server(debug=True, host='127.0.0.1', port=8050)
