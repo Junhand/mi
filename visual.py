@@ -160,8 +160,9 @@ def plot_df_scatter(df, target_col):
             row=3, col=i*4-1
         )
         fig.add_trace(
-            go.Scatter(x=np.zeros(len(missing_df_target[target_col])),
-                        y=missing_df_target[target_col].values, 
+            go.Scatter(x=np.zeros(len(missing_df_target[target_col]))if len(missing_df_target[target_col]) != 0 else [0],
+                       y=missing_df_target[target_col] if len(missing_df_target[target_col]) != 0 else [0], 
+                       opacity= 0 if len(missing_df_target[target_col]) == 0 else 1,
                       marker_color='red',  # カラースケール変更
                       mode ='markers',
                       ),
@@ -197,9 +198,10 @@ def plot_df_scatter(df, target_col):
         fig.add_trace(
             go.Box( 
                 name=f'Observed',
-                y=observed_df_target[target_col], 
+                y=[0] if observed_df_target[target_col] is None else observed_df_target[target_col], 
                 jitter=0.5, pointpos=0, 
                 offsetgroup=1,
+                opacity= 0 if len(observed_df_target[target_col]) == 0 else 1,
                 boxpoints='all',
                 marker_color='blue',
             ),
@@ -210,9 +212,10 @@ def plot_df_scatter(df, target_col):
         fig.add_trace(
             go.Box(
                 name=f'Missing',
-                y=missing_df_target[target_col], 
+                y=[0] if len(missing_df_target[target_col]) == 0 else missing_df_target[target_col], 
                 jitter=0.5, pointpos=0, 
                 offsetgroup=1,
+                opacity= 0 if len(missing_df_target[target_col]) == 0 else 1,
                 boxpoints='all',
                 marker_color='red',
             ),
