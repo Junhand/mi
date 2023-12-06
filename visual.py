@@ -128,8 +128,8 @@ def plot_df_scatter(df, target_col):
         rows=4, cols=num_cols*4,
         shared_xaxes=True,
         shared_yaxes=True,
-        vertical_spacing=0.005,
-        horizontal_spacing=0.001,
+        vertical_spacing=0.00,
+        horizontal_spacing=0.00,
         column_widths = column_widths,
         row_heights = [0.1, 0.6, 0.1, 0.2],
         specs=specs
@@ -150,8 +150,7 @@ def plot_df_scatter(df, target_col):
             ),
             row=2, col=i*4-1
         )
-        a = missing_df_other[col].values
-        b = np.zeros(len(missing_df_other[col]))
+
         fig.add_trace(
             go.Scatter(x=missing_df_other[col],
                        y=np.zeros(len(missing_df_other[col])),
@@ -221,15 +220,20 @@ def plot_df_scatter(df, target_col):
         )
         # 軸の設定
         #
-        fig.update_xaxes(title_text=col, row=4, col=i*4-1)
-        fig.update_xaxes(showgrid=False, row=2, col=i*4-2)
-        fig.update_xaxes(showticklabels=True, tickangle=-90, automargin=True, row=2, col=i*4-3)
-
-        fig.update_yaxes(showticklabels=True, row=4, col=i*4-1)
-        fig.update_yaxes(showgrid=False, row=3, col=i*4-1)
-        fig.update_yaxes(showticklabels=False, row=2, col=i*4-1)
+        fig.update_xaxes(row=2, col=i*4-1,linecolor='gray', linewidth=1.5 ,mirror=True)
+        fig.update_xaxes(showgrid=False, row=2, col=i*4-2,linecolor='gray', linewidth=1.5 ,mirror=True)
+        fig.update_xaxes(showticklabels=True, tickangle=-90, automargin=True, row=2, col=i*4-3,linecolor='gray', linewidth=1.5 ,mirror=True)
+        fig.update_xaxes(showgrid=False, row=3, col=i*4-1)
+        fig.update_xaxes(title_text=col, row=4, col=i*4-1,linecolor='gray', linewidth=1.5,mirror=True)
+        
+        
+        fig.update_yaxes(showticklabels=False, row=2, col=i*4-1,linecolor='gray', linewidth=1.5 ,mirror=True)
         fig.update_yaxes(showticklabels=False, row=2, col=i*4-2)
-        fig.update_yaxes(title_text=target_col, showticklabels=True, row=2, col=i*4-3)
+        fig.update_yaxes(title_text=target_col, showticklabels=True, row=2, col=i*4-3,linecolor='gray', linewidth=1.5,mirror=True)
+        fig.update_yaxes(showgrid=False, row=3, col=i*4-1,linecolor='gray', linewidth=1.5 ,mirror=True)
+        fig.update_yaxes(showticklabels=True, row=4, col=i*4-1,linecolor='gray', linewidth=1.5 ,mirror=True)
+        
+
 
     # グリッド内のプロット間のスペースを調整
     fig.update_layout(
