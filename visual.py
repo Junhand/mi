@@ -266,3 +266,96 @@ def plot_df_ts(df):
             # t検定を実施
             t_stat, p_value = ttest_ind(observed_df_other[j], missing_df_other[j], equal_var=False)
             
+
+def listwize_vis(df):
+    listwise_df = df.dropna()
+    stats = df.describe()
+    # 歪度の追加
+    stats.loc['skew'] = df.skew()
+    # 尖度の追加
+    stats.loc['kurtosis'] = df.kurt()
+    # 分散の追加
+    stats.loc['variance'] = df.var()
+
+    listwise_stats = listwise_df.describe()
+    # 歪度の追加
+    listwise_stats.loc['skew'] = listwise_df.skew()
+    # 尖度の追加
+    listwise_stats.loc['kurtosis'] = listwise_df.kurt()
+    # 分散の追加
+    listwise_stats.loc['variance'] = listwise_df.var()
+
+    fig = make_subplots(rows=1, cols=len(df.columns), horizontal_spacing=0.0001) # 例として0.05を設定)
+    # バイオリンプロットとストリッププロットを追加
+    annotations = []
+    for i, col in enumerate(df.columns, start=1):
+        # 観測データのボックスプロットを追加
+        fig.add_trace(go.Violin(y=df[col], name=f'Observed', 
+                             points='all', jitter=1, pointpos=0, box_visible=True,
+                             width=0.35, marker_color='blue', line_color='blue'), row=1, col=i)
+
+        # 欠測データのボックスプロットを追加
+        fig.add_trace(go.Violin(y=listwise_df[col], name=f'Missing', 
+                             points='all', jitter=1, pointpos=0, box_visible=True,
+                             width=0.35, marker_color='red', line_color='red'), row=1, col=i)
+        
+        annotations.append({
+            'x': 0.5,  # サブプロットのインデックスをx座標として使用
+            'y': 1.05,  # y座標をプロットエリアの上部に設定
+            'xref': f'x{i}', 
+            'yref': 'paper',  # ペーパー座標を使用
+            'text': f'平均={stats[col]["mean"]:.3f}',
+            'showarrow': False,
+            'font': {'color': 'red', 'size': 8},
+        })      
+        fig.update_xaxes(title_text=col, row=1, col=i)  
+        fig.update_yaxes(title_text=col, automargin=True, row=1, col=i)  
+
+    # 更新オプション
+    fig.update_layout(
+        title=f"リストワイズ前後の分布の違い",
+        title_x = 0.5,
+        boxgap=0.5,      # ボックス間の間隔を広げる
+        annotations=annotations,
+        violinmode='group',
+        showlegend=False,
+        width=150*len(df.columns),
+        height=600,
+    )
+    fig.update_xaxes(tickangle=-90, automargin=True)
+
+    # 表示
+    fig.show()
+
+
+
+# import dash
+# from dash import html, dcc, Input, Output
+# import plotly.express as px
+# import pandas as pd
+
+# # サンプルデータセット
+# df = pd.DataFrame({
+#     'A': range(1, 11),
+#     'B': [2, 3, 4, 5, 4, 3, 2, 1, 2, 3],
+#     'C': [5, 3, 3, 3, 5, 6, 7, 8, 9, 10]
+# })
+
+# # Dashアプリの初期化
+# app = dash.Dash(__name__)
+# app.layout = html.Div([
+#     dcc.Dropdown(
+#         id='column-dropdown',
+#         options=[{'label': col, 'value': col} for col in df.columns],
+#         value='A'
+#     ),
+#     dcc.Graph(id='graph-output')
+# ])
+# @app.callback(
+#     Output('graph-output', 'figure'),
+#     Input('column-dropdown', 'value')
+# )
+# def update_graph(selected_column):
+#     return px.line(df, x=df.index, y=selected_column)
+# if __name__ == '__main__':
+#     app.run_server(debug=True, host='127.0.0.1', port=8050)
