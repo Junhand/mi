@@ -248,7 +248,7 @@ def plot_df_scatter(df, target_col):
     )
 
     # プロットの表示
-    fig.show()
+    return fig
 
 
 
@@ -292,12 +292,12 @@ def listwize_vis(df):
         # 観測データのボックスプロットを追加
         fig.add_trace(go.Violin(y=df[col], name=f'Observed', 
                              points='all', jitter=1, pointpos=0, box_visible=True,
-                             width=0.35, marker_color='blue', line_color='blue'), row=1, col=i)
+                             width=0.35, marker_color='blue', line_color='blue', legendgroup = f'{i}'), row=1, col=i)
 
         # 欠測データのボックスプロットを追加
         fig.add_trace(go.Violin(y=listwise_df[col], name=f'Missing', 
                              points='all', jitter=1, pointpos=0, box_visible=True,
-                             width=0.35, marker_color='red', line_color='red'), row=1, col=i)
+                             width=0.35, marker_color='red', line_color='red', legendgroup = f'{i}'), row=1, col=i)
         
         annotations.append({
             'x': 0.5,  # サブプロットのインデックスをx座標として使用
@@ -318,14 +318,26 @@ def listwize_vis(df):
         boxgap=0.5,      # ボックス間の間隔を広げる
         annotations=annotations,
         violinmode='group',
-        showlegend=False,
+        showlegend=True,
         width=150*len(df.columns),
         height=600,
+        legend=dict(
+            traceorder= 'grouped',
+            orientation='h',  # 水平方向に並べる
+            #xanchor='center',  # 凡例のX軸アンカーを中央に
+            #x=0.,            # 凡例のX軸位置を中央に
+            y=50.,            # 凡例のY軸位置をグラフの下に設定
+            tracegroupgap=180,
+            itemwidth=50, 
+        ),
+
     )
+    # fig.update_traces(visible='legendonly', 
+    #     selector=dict(name="Missing"))
     fig.update_xaxes(tickangle=-90, automargin=True)
 
     # 表示
-    fig.show()
+    return fig
 
 
 
