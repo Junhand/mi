@@ -2,6 +2,7 @@ import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from scipy.stats import ttest_ind
 import numpy as np
+import pandas as pd
 
 def plot_df_t(df, target_col):
 
@@ -174,9 +175,11 @@ def plot_df_scatter(df, target_col):
             go.Box( 
                 name=f'Observed',
                 x=observed_df_other[col], 
-                jitter=0.5, pointpos=0, 
+                jitter=1.0, 
+                pointpos=0, 
                 offsetgroup=1,
                 boxpoints='all',
+                marker=dict(size=3),
                 marker_color='blue',
                 orientation='h'
             ),
@@ -186,9 +189,11 @@ def plot_df_scatter(df, target_col):
             go.Box( 
                 name=f'Missing',
                 x=missing_df_other[col], 
-                jitter=0.5, pointpos=0, 
+                jitter=1, 
+                pointpos=0, 
                 offsetgroup=1,
                 boxpoints='all',
+                marker=dict(size=3),
                 marker_color='red',
                 orientation='h'
             ),
@@ -199,10 +204,12 @@ def plot_df_scatter(df, target_col):
             go.Box( 
                 name=f'Observed',
                 y=[0] if observed_df_target[target_col] is None else observed_df_target[target_col], 
-                jitter=0.5, pointpos=0, 
+                jitter=1, 
+                pointpos=0, 
                 offsetgroup=1,
                 opacity= 0 if len(observed_df_target[target_col]) == 0 else 1,
                 boxpoints='all',
+                marker=dict(size=3),
                 marker_color='blue',
             ),
             row=2, col=i*4-3
@@ -213,10 +220,12 @@ def plot_df_scatter(df, target_col):
             go.Box(
                 name=f'Missing',
                 y=[0] if len(missing_df_target[target_col]) == 0 else missing_df_target[target_col], 
-                jitter=0.5, pointpos=0, 
+                jitter=1, 
+                pointpos=0, 
                 offsetgroup=1,
                 opacity= 0 if len(missing_df_target[target_col]) == 0 else 1,
                 boxpoints='all',
+                marker=dict(size=3),
                 marker_color='red',
             ),
             row=2, col=i*4-3
@@ -267,75 +276,157 @@ def plot_df_ts(df):
             t_stat, p_value = ttest_ind(observed_df_other[j], missing_df_other[j], equal_var=False)
             
 
-def listwize_vis(df):
+def plot_listwize_df(df: pd.DataFrame, subset = None, title: str = "リストワイズ前後の分布の違い", fig_width:int=None, fig_height:int=None, font_size: int =16, bins:int=None) -> None:
     listwise_df = df.dropna()
-    stats = df.describe()
-    # 歪度の追加
-    stats.loc['skew'] = df.skew()
-    # 尖度の追加
-    stats.loc['kurtosis'] = df.kurt()
-    # 分散の追加
-    stats.loc['variance'] = df.var()
+    original_stats = df.describe()
+    original_stats.loc['skew'] = df.skew() # 歪度の追加
+    original_stats.loc['kurtosis'] = df.kurt() # 尖度の追加
+    original_stats.loc['variance'] = df.var() # 分散の追加
 
     listwise_stats = listwise_df.describe()
-    # 歪度の追加
-    listwise_stats.loc['skew'] = listwise_df.skew()
-    # 尖度の追加
-    listwise_stats.loc['kurtosis'] = listwise_df.kurt()
-    # 分散の追加
-    listwise_stats.loc['variance'] = listwise_df.var()
+    listwise_stats.loc['skew'] = listwise_df.skew()  # 歪度の追加
+    listwise_stats.loc['kurtosis'] = listwise_df.kurt() # 尖度の追加
+    listwise_stats.loc['variance'] = listwise_df.var() # 分散の追加
 
-    fig = make_subplots(rows=1, cols=len(df.columns), horizontal_spacing=0.0001) # 例として0.05を設定)
+    specs=[[{"type": "xy"} if i %2 == 0 else {"type": "image"} for i in range(2*len(df.columns)) ]]
+    fig = make_subplots(rows=1, cols=2*len(df.columns), horizontal_spacing=0.0, print_grid=True, vertical_spacing=0.1, specs=specs ) # 例として0.05を設定)
     # バイオリンプロットとストリッププロットを追加
     annotations = []
-    for i, col in enumerate(df.columns, start=1):
-        # 観測データのボックスプロットを追加
-        fig.add_trace(go.Violin(y=df[col], name=f'Observed', 
-                             points='all', jitter=1, pointpos=0, box_visible=True,
-                             width=0.35, marker_color='blue', line_color='blue', legendgroup = f'{i}'), row=1, col=i)
-
-        # 欠測データのボックスプロットを追加
-        fig.add_trace(go.Violin(y=listwise_df[col], name=f'Missing', 
-                             points='all', jitter=1, pointpos=0, box_visible=True,
-                             width=0.35, marker_color='red', line_color='red', legendgroup = f'{i}'), row=1, col=i)
+    for i, col in enumerate(df.columns):
+        # 観測データのヒストグラムを追加
+        fig.add_trace(go.Histogram(x=df[col], name='Original', legendwidth=fig_width, #, legend=f'legend{i+1}',#-58.5
+                                marker_color='blue', opacity=0.5, legendgroup=f'{i}',
+                                  nbinsx=bins), row=1, col=2*i+1)
         
+        # リストワイズ後のヒストグラムを追加
+        fig.add_trace(go.Histogram(x=listwise_df[col], name='Listwise',# legend=f'legend{i}',#, showlegend=True,
+                                marker_color='red', opacity=0.5, legendgroup=f'{i}',
+                                  nbinsx=bins), row=1, col=2*i+1)
+        #fig.add_trace(go.Image(z=[-1,0]), row=1, col=2*i+2)
+        
+        # describe() を使用して統計情報を取得
+        original_stats_info = df[col].describe()
+        listwise_stats_info = listwise_df[col].describe()
+        original_stats_info['skew'] = df[col].skew() # 歪度の追加
+        original_stats_info['kurtosis'] = df[col].kurt() # 尖度の追加
+
+        listwise_stats = listwise_df.describe()
+        listwise_stats_info['skew'] = listwise_df[col].skew()  # 歪度の追加
+        listwise_stats_info['kurtosis'] = listwise_df[col].kurt() # 尖度の追加
+
+        # 統計情報をテキストとして整形
+        original_stats = "<br>".join([f"{stat}: {original_stats_info[stat]:.2f}" for stat in original_stats_info.index])
+        listwise_stats = "<br>".join([f"{stat}: {listwise_stats_info[stat]:.2f}" for stat in listwise_stats_info.index])
+        max_length = max(len(f"{value:.2f}")+6 for value in original_stats_info)
+
+        # 各サブプロットに注釈を追加
         annotations.append({
-            'x': 0.5,  # サブプロットのインデックスをx座標として使用
-            'y': 1.05,  # y座標をプロットエリアの上部に設定
-            'xref': f'x{i}', 
-            'yref': 'paper',  # ペーパー座標を使用
-            'text': f'平均={stats[col]["mean"]:.3f}',
+            'x': 1/len(df.columns)/2 + 1/len(df.columns)*i, #1, 
+            'y': 1, 
+            'xref': 'paper', 
+            'yref': 'paper', 
+            'text': original_stats,
             'showarrow': False,
-            'font': {'color': 'red', 'size': 8},
-        })      
-        fig.update_xaxes(title_text=col, row=1, col=i)  
-        fig.update_yaxes(title_text=col, automargin=True, row=1, col=i)  
+            'xanchor':'left',  # アノテーションのテキストを左端に固定
+            'yanchor':'top',
+            'align':'left',  
+            'font': {'color': 'gray', 'size': font_size},
+            'xshift': 5,
+            'yshift': -font_size*1.5,
+        })
+        annotations.append({
+            'x': 1/len(df.columns)/2 + 1/len(df.columns)*i, 
+            'y': 1, 
+            'xref': 'paper', 
+            'yref': 'paper', 
+            'text': "Original",
+            'showarrow': False,
+            'xanchor':'left',  # アノテーションのテキストを左端に固定
+            'yanchor':'top',
+            'align':'left',  
+            'font': {'color': '#0000FF', 'size': font_size+2},
+            'xshift': 5,#+font_size*max_length/1.333,
+            'yshift': 0,
+        })
+        annotations.append({
+            'x': 1/len(df.columns)/2 + 1/len(df.columns)*i, 
+            'y': 1, 
+            'xref': 'paper', 
+            'yref': 'paper', 
+            'text': listwise_stats,
+            'showarrow': False,
+            'xanchor':'left',  # アノテーションのテキストを左端に固定
+            'yanchor':'top',
+            'align':'left',  
+            'font': {'color': 'gray', 'size': font_size},
+            #'bgcolor':'white',
+            'xshift': 5+font_size*max_length/1.333,
+            'yshift': -font_size*1.5,
+        })
+        annotations.append({
+            'x': 1/len(df.columns)/2 + 1/len(df.columns)*i, #5, 
+            'y': 1,
+            'xref': 'paper',#f'x{2*i+2}', 
+            'yref': 'paper', 
+            'text': "Listwise",
+            'showarrow': False,
+            'xanchor':'left',  # アノテーションのテキストを左端に固定
+            'yanchor':'top',
+            'align':'left',  
+            'font': {'color': 'red', 'size': font_size+2},
+            'xshift': 5+font_size*max_length/1.333,
+            'yshift': 0,
+        })
 
-    # 更新オプション
+
+
+        #fig.add_annotation(x=1/len(df.columns)/2+1/len(df.columns)*i, y=1, xref= "paper", yref= "paper", text=original_stats, showarrow=False)
+        #fig.add_annotation(x=0, y=1, text=listwise_stats, showarrow=False, row=1, col=2*i+1)
+
+
+        fig.update_xaxes(title_text=col, row=1, col=2*i+1)
+        #fig.update_xaxes(#visible=False,range=[0, 10], showgrid=False, row=1, col=2*i)
+       #fig.update_yaxes(visible=False, showgrid=False, row=1, col=2*i)
+        #fig.update_traces(paper_bgcolor='rgba(255,255,255,1)', row=1, col=2*i-1)
+
+
+    # タイトルと図の幅・高さを設定
     fig.update_layout(
-        title=f"リストワイズ前後の分布の違い",
+        title='データの分布ヒストグラム',
         title_x = 0.5,
-        boxgap=0.5,      # ボックス間の間隔を広げる
+        #boxgap=0.5,      # ボックス間の間隔を広げる
+        barmode='overlay',  # ヒストグラムを重ねる
         annotations=annotations,
-        violinmode='group',
         showlegend=True,
-        width=150*len(df.columns),
-        height=600,
-        legend=dict(
-            traceorder= 'grouped',
-            orientation='h',  # 水平方向に並べる
-            #xanchor='center',  # 凡例のX軸アンカーを中央に
-            #x=0.,            # 凡例のX軸位置を中央に
-            y=50.,            # 凡例のY軸位置をグラフの下に設定
-            tracegroupgap=180,
-            itemwidth=50, 
-        ),
+        #plot_bgcolor='rgba(255,255,255,1)',
+        #paper_bgcolor='rgba(255,255,255,1)'
 
+        #legend=dict(x=1/len(df.columns)/2),
+        # legend=dict(
+        #     traceorder= 'grouped',
+        #     orientation='h',  # 水平方向に並べる
+        #     x=1,  # 凡例のX軸位置を右端に設定
+        #     y=1.15,  # 凡例のY軸位置を上端に設定
+        #     xanchor='right',  # 凡例のX軸アンカーを右に
+        #     yanchor='top',    # 凡例のY軸アンカーを上に
+        #     #ho=200,
+        #     #bgcolor='rgba(255, 255, 255, 0)',
+        #     #itemwidth=30, 
+        # ),
+        #margin=dict(t=0, b=0, l=50, r=50),
     )
-    # fig.update_traces(visible='legendonly', 
-    #     selector=dict(name="Missing"))
-    fig.update_xaxes(tickangle=-90, automargin=True)
+    cols = len(df.columns) * 2
 
+
+    if fig_height is not None:
+        fig.update_layout(
+            height=fig_height
+        )
+
+    if fig_width is not None:
+        fig.update_layout(
+            width=fig_width*(2*len(df.columns))
+        )
     # 表示
     return fig
 
